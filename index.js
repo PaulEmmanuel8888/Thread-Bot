@@ -18,28 +18,46 @@ const niches = [
   "🎲 Surprise Me",
 ];
 
+const userIdeas = new Map();
+
 async function generateIdeas(niche) {
   const prompt = `
-You are a content strategist helping a web developer grow on X.
+You are helping a web developer create content for X.
 
-Generate exactly 5 strong X thread ideas for this niche:
+Generate exactly 5 X thread topic ideas for:
 
 ${niche}
 
-The target audience is primarily:
-- Beginner/intermediate freelance web developers
-- Developers trying to get clients
-- People trying to make money from freelancing
-- People trying to grow their freelance business
+Target audience:
+- Beginner and intermediate freelance web developers
+- Developers trying to get their first clients
+- Freelancers trying to get more clients
+- People trying to turn web development into income
 
-Important:
-- Focus on practical freelancing and client-acquisition topics.
-- Do NOT generate generic programming tutorials.
-- Each idea should have a compelling hook.
-- Ideas should work well as a 3–5 post X thread.
-- Avoid fake guru language and unrealistic income claims.
-- Make the ideas specific rather than vague.
-- Return ONLY the 5 ideas, numbered 1–5.
+Content direction:
+- Focus heavily on client acquisition, freelancing, sales, positioning,
+  outreach, portfolios, pricing, and growing a freelance business.
+- Technical programming content should NOT be the focus.
+- Make each idea practical and actionable.
+- Make the titles interesting and specific.
+- Do not invent personal experiences, results, clients, income,
+  statistics, or case studies.
+- Avoid unrealistic claims and generic motivational content.
+
+Return ONLY the 5 titles.
+
+Use exactly this format:
+
+1. Title
+2. Title
+3. Title
+4. Title
+5. Title
+
+No introduction.
+No explanations.
+No emojis.
+No markdown.
 `;
 
   const response = await openai.chat.completions.create({
@@ -53,6 +71,19 @@ Important:
   });
 
   return response.choices[0].message.content;
+}
+
+function createIdeaButtons(ideas) {
+  const lines = ideas
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => /^\d+\./.test(line));
+
+  return lines.map((line, index) => {
+    const title = line.replace(/^\d+\.\s*/, "");
+
+    return [Markup.button.callback(`${index + 1}. ${title}`, `idea:${index}`)];
+  });
 }
 
 bot.start((ctx) => {
@@ -77,7 +108,12 @@ bot.on("callback_query", async (ctx) => {
     try {
       const ideas = await generateIdeas(niche);
 
-      await ctx.reply(`🔥 Here are 5 thread ideas for ${niche}:\n\n${ideas}`);
+      userIdeas.set(ctx.from.id, ideas);
+
+      await ctx.reply(
+        `🔥 Choose a thread idea for ${niche}:`,
+        Markup.inlineKeyboard(createIdeaButtons(ideas)),
+      );
     } catch (error) {
       console.error(error);
 
@@ -85,6 +121,33 @@ bot.on("callback_query", async (ctx) => {
         "❌ Something went wrong while generating the ideas. Try again.",
       );
     }
+  }
+
+  if (data.startsWith("idea:")) {
+    const index = Number(data.split(":")[1]);
+
+    const ideas = userIdeas.get(ctx.from.id);
+
+    if (!ideas) {
+      await ctx.answerCbQuery("Ideas expired. Please start again.");
+      return;
+    }
+
+    const lines = ideas
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => /^\d+\./.test(line));
+
+    const title = lines[index]?.replace(/^\d+\.\s*/, "");
+
+    if (!title) {
+      await ctx.answerCbQuery("That idea could not be found.");
+      return;
+    }
+
+    await ctx.answerCbQuery();
+
+    await ctx.reply(`🧵 You selected:\n\n"${title}"\n\nWriting your thread...`);
   }
 });
 
