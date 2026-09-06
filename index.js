@@ -1,10 +1,13 @@
-import dotenv from "dotenv";
-
-import { Telegraf } from "telegraf";
-
-dotenv.config();
+import "dotenv/config";
+import { Telegraf, Markup } from "telegraf";
+import OpenAI from "openai";
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENROUTER_API_KEY,
+  baseURL: "https://openrouter.ai/api/v1",
+});
 
 const niches = [
   "💰 Getting Clients",
@@ -14,6 +17,43 @@ const niches = [
   "🧠 Beginner Lessons",
   "🎲 Surprise Me",
 ];
+
+async function generateIdeas(niche) {
+  const prompt = `
+You are a content strategist helping a web developer grow on X.
+
+Generate exactly 5 strong X thread ideas for this niche:
+
+${niche}
+
+The target audience is primarily:
+- Beginner/intermediate freelance web developers
+- Developers trying to get clients
+- People trying to make money from freelancing
+- People trying to grow their freelance business
+
+Important:
+- Focus on practical freelancing and client-acquisition topics.
+- Do NOT generate generic programming tutorials.
+- Each idea should have a compelling hook.
+- Ideas should work well as a 3–5 post X thread.
+- Avoid fake guru language and unrealistic income claims.
+- Make the ideas specific rather than vague.
+- Return ONLY the 5 ideas, numbered 1–5.
+`;
+
+  const response = await openai.chat.completions.create({
+    model: "openrouter/free",
+    messages: [
+      {
+        role: "user",
+        content: prompt,
+      },
+    ],
+  });
+
+  return response.choices[0].message.content;
+}
 
 bot.start((ctx) => {
   ctx.reply(
@@ -32,7 +72,19 @@ bot.on("callback_query", async (ctx) => {
 
     await ctx.answerCbQuery();
 
-    ctx.reply(`You selected: ${niche}`);
+    await ctx.reply(`💡 Generating ideas for ${niche}...`);
+
+    try {
+      const ideas = await generateIdeas(niche);
+
+      await ctx.reply(`🔥 Here are 5 thread ideas for ${niche}:\n\n${ideas}`);
+    } catch (error) {
+      console.error(error);
+
+      await ctx.reply(
+        "❌ Something went wrong while generating the ideas. Try again.",
+      );
+    }
   }
 });
 
