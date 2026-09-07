@@ -21,6 +21,8 @@ const niches = [
 const userIdeas = new Map();
 
 async function generateIdeas(niche) {
+  console.log("🤖 Generating ideas for:", niche);
+
   const prompt = `
 You are helping a web developer create content for X.
 
@@ -60,15 +62,23 @@ No emojis.
 No markdown.
 `;
 
-  const response = await openai.chat.completions.create({
-    model: "openrouter/free",
-    messages: [
-      {
-        role: "user",
-        content: prompt,
-      },
-    ],
-  });
+  console.log("📡 Sending request to OpenRouter...");
+
+  const response = await openai.chat.completions.create(
+    {
+      model: "openrouter/free",
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+    },
+    {
+      timeout: 60000,
+    },
+  );
+  console.log(" OpenRouter responded");
 
   return response.choices[0].message.content;
 }
