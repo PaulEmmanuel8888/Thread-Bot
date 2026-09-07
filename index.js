@@ -83,6 +83,82 @@ No markdown.
   return response.choices[0].message.content;
 }
 
+async function generateThread(title) {
+  const prompt = `
+You are helping a web developer write a high-quality thread for X.
+
+Thread topic:
+${title}
+
+Target audience:
+- Beginner and intermediate freelance web developers
+- Developers trying to get their first clients
+- Freelancers trying to get more clients
+- People trying to turn web development into income
+
+Write a thread consisting of exactly 3 to 5 posts.
+
+Writing style:
+- Conversational
+- Direct
+- Practical
+- Clear
+- Specific
+- No emojis
+- No generic AI phrases like "It wasn't just {x}. It was that."
+- No very short sentences with unnecessary breaks in between
+- Useful rather than motivational
+- Sound like a real developer sharing useful knowledge, not a marketing guru
+
+Requirements:
+- The FIRST post must be a strong hook that makes someone want to keep reading.
+- Each post should naturally lead into the next.
+- Give actionable advice, examples, or steps where appropriate.
+- Keep the content focused on freelancing, clients, selling yourself,
+  positioning, outreach, portfolios, pricing, or business.
+- Do not invent personal experiences.
+- Do not claim to have worked with clients you haven't been given.
+- Do not invent income, results, statistics, case studies, or success stories.
+- Do not make unrealistic promises.
+- Do not repeat the topic title word-for-word as the hook.
+- Avoid generic motivational phrases.
+- Each post must be short enough for a standard X post.
+
+Format:
+1. First post
+
+2. Second post
+
+3. Third post
+
+4. Fourth post (if needed)
+
+5. Fifth post (if needed)
+
+Return ONLY the thread.
+Do not include an introduction.
+Do not include explanations.
+Do not use markdown headings.
+`;
+
+  const response = await openai.chat.completions.create(
+    {
+      model: "openrouter/free",
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+    },
+    {
+      timeout: 60000,
+    },
+  );
+
+  return response.choices[0].message.content;
+}
+
 function createIdeaButtons(ideas) {
   const lines = ideas
     .split("\n")
@@ -160,7 +236,21 @@ bot.on("callback_query", async (ctx) => {
 
     await ctx.answerCbQuery();
 
-    await ctx.reply(`🧵 You selected:\n\n"${title}"\n\nWriting your thread...`);
+    await ctx.reply(
+      `🧵 You selected:\n\n"${title}"\n\n✍️ Writing your thread...`,
+    );
+
+    try {
+      const thread = await generateThread(title);
+
+      await ctx.reply(`🔥 Your thread:\n\n${thread}`);
+    } catch (error) {
+      console.error(error);
+
+      await ctx.reply(
+        "❌ Something went wrong while writing the thread. Please try again.",
+      );
+    }
   }
 });
 
