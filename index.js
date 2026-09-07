@@ -81,8 +81,11 @@ function createIdeaButtons(ideas) {
 
   return lines.map((line, index) => {
     const title = line.replace(/^\d+\.\s*/, "");
+    const shortTitle = title.length > 35 ? title.slice(0, 35) + "..." : title;
 
-    return [Markup.button.callback(`${index + 1}. ${title}`, `idea:${index}`)];
+    return [
+      Markup.button.callback(`${index + 1}. ${shortTitle}`, `idea:${index}`),
+    ];
   });
 }
 
