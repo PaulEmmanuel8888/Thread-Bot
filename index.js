@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { Telegraf, Markup } from "telegraf";
 import OpenAI from "openai";
+import express from "express";
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
@@ -96,49 +97,94 @@ Target audience:
 - Freelancers trying to get more clients
 - People trying to turn web development into income
 
-Write a thread consisting of exactly 3 to 5 posts.
+Write a useful, well-developed X thread consisting of 3 to 5 posts.
 
-Writing style:
+The thread should feel like a complete piece of advice, not a collection
+of short motivational statements.
+
+THREAD STRUCTURE:
+
+Post 1:
+Start with a strong hook that creates curiosity or challenges a common
+belief. Make the reader want to continue.
+
+Post 2:
+Develop the main idea. Explain the problem, mistake, or concept clearly.
+
+Post 3:
+Give practical advice, a framework, steps, or examples.
+
+Post 4:
+Continue developing the idea with a useful example, clarification,
+or practical application.
+
+Post 5:
+End with a clear takeaway or specific action the reader can take.
+Only include this post if it adds value.
+
+WRITING STYLE:
 - Conversational
 - Direct
 - Practical
-- Clear
 - Specific
-- No emojis
-- No generic AI phrases like "It wasn't just {x}. It was that."
-- No very short sentences with unnecessary breaks in between
-- Useful rather than motivational
-- Sound like a real developer sharing useful knowledge, not a marketing guru
+- Clear
+- Insightful
+- Slightly opinionated when appropriate
+- Sound like a real developer sharing useful knowledge
+- Do not sound like an AI, marketing guru, or motivational speaker
 
-Requirements:
-- The FIRST post must be a strong hook that makes someone want to keep reading.
+IMPORTANT:
+- Do NOT make the posts unnecessarily short.
+- Develop each idea properly.
+- A post can contain multiple sentences.
+- Aim for roughly 150–280 characters per post when possible,
+  but prioritize useful content over hitting an exact length.
+- Use line breaks within a post when they improve readability.
+- Avoid filler.
+- Avoid repeating the same point across multiple posts.
 - Each post should naturally lead into the next.
-- Give actionable advice, examples, or steps where appropriate.
-- Keep the content focused on freelancing, clients, selling yourself,
-  positioning, outreach, portfolios, pricing, or business.
-- Do not invent personal experiences.
-- Do not claim to have worked with clients you haven't been given.
-- Do not invent income, results, statistics, case studies, or success stories.
-- Do not make unrealistic promises.
-- Do not repeat the topic title word-for-word as the hook.
-- Avoid generic motivational phrases.
-- Each post must be short enough for a standard X post.
+- Include concrete examples where they make the advice clearer.
+- Technical programming content should NOT be the focus.
+- Focus on freelancing, getting clients, positioning, outreach,
+  portfolios, pricing, sales, and growing a freelance business.
 
-Format:
-1. First post
+DO NOT:
+- Invent personal experiences.
+- Claim the writer worked with clients they haven't been given.
+- Invent income, results, statistics, case studies, or success stories.
+- Make unrealistic promises.
+- Use fake authority.
+- Use generic motivational phrases.
+- Repeat the topic title word-for-word as the hook.
+- Use excessive emojis.
 
-2. Second post
+OUTPUT FORMAT:
 
-3. Third post
+POST 1
+[post text]
 
-4. Fourth post (if needed)
+---POST---
 
-5. Fifth post (if needed)
+POST 2
+[post text]
 
+---POST---
+
+POST 3
+[post text]
+
+---POST---
+
+POST 4
+[post text]
+
+---POST---
+
+POST 5
+[post text]
+
+Only include posts that are actually needed.
 Return ONLY the thread.
-Do not include an introduction.
-Do not include explanations.
-Do not use markdown headings.
 `;
 
   const response = await openai.chat.completions.create(
@@ -243,7 +289,12 @@ bot.on("callback_query", async (ctx) => {
     try {
       const thread = await generateThread(title);
 
-      await ctx.reply(`🔥 Your thread:\n\n${thread}`);
+      const formattedThread = thread
+        .replace(/POST \d+\n/g, "")
+        .replace(/\n---POST---\n/g, "\n\n────────────\n\n");
+
+      await ctx.reply(`🔥 Your thread:\n\n${formattedThread}`);
+      console.log(formattedThread);
     } catch (error) {
       console.error(error);
 
@@ -254,6 +305,24 @@ bot.on("callback_query", async (ctx) => {
   }
 });
 
-bot.launch();
+const app = express();
 
-console.log("🤖 Thread bot is running...");
+app.use(express.json());
+
+app.use(bot.webhookCallback("/telegram"));
+
+app.get("/", (req, res) => {
+  res.send("🤖 Thread Bot is running!");
+});
+
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, "0.0.0.0", async () => {
+  console.log(`🤖 Thread bot is running on port ${PORT}`);
+
+  const webhookUrl = `${process.env.WEBHOOK_URL}/telegram`;
+
+  await bot.telegram.setWebhook(webhookUrl);
+
+  console.log(`🔗 Telegram webhook set to: ${webhookUrl}`);
+});
